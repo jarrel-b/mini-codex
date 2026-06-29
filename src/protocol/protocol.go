@@ -9,7 +9,7 @@ const (
 	RoleTool      Role = "tool"
 )
 
-type MessageSchema struct {
+type Message struct {
 	Role       Role
 	Content    string
 	ToolCallID string
@@ -26,23 +26,29 @@ const (
 	OpDeny         Op = "deny"
 )
 
-type Event string
+type Event struct {
+	Type     EventType
+	ThreadID string
+	Text     string
+}
+
+type EventType string
 
 const (
-	OpThreadStarted     Event = "thread_started"
-	OpThreadResumed     Event = "thread_resumed"
-	OpTurnStarted       Event = "turn_started"
-	OpUserMessage       Event = "user_message"
-	OpAssistantDelta    Event = "assistant_delta"
-	OpAssistantMessage  Event = "assistant_message"
-	OpToolRequested     Event = "tool_requested"
-	OpToolStarted       Event = "tool_started"
-	OpToolOutput_delta  Event = "tool_output_delta"
-	OpToolFinished      Event = "tool_finished"
-	OpApprovalRequested Event = "approval_requested"
-	OpApprovalResolved  Event = "approval_resolved"
-	OpFileChanged       Event = "file_changed"
-	OpDiffUpdated       Event = "diff_updated"
-	OpTurnFinished      Event = "turn_finished"
-	OpError             Event = "error"
+	EventThreadStarted     EventType = "thread_started"
+	EventThreadResumed     EventType = "thread_resumed"
+	EventTurnStarted       EventType = "turn_started"
+	EventUserMessage       EventType = "user_message"
+	EventAssistantDelta    EventType = "assistant_delta"
+	EventAssistantMessage  EventType = "assistant_message"
+	EventToolRequested     EventType = "tool_requested"
+	EventToolStarted       EventType = "tool_started"
+	EventToolOutput_delta  EventType = "tool_output_delta"
+	EventToolFinished      EventType = "tool_finished"
+	EventApprovalRequested EventType = "approval_requested"
+	EventApprovalResolved  EventType = "approval_resolved"
+	EventFileChanged       EventType = "file_changed"
+	EventDiffUpdated       EventType = "diff_updated"
+	EventTurnFinished      EventType = "turn_finished"
+	EventError             EventType = "error"
 )
