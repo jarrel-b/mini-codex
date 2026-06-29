@@ -1,12 +1,11 @@
 package storage
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"mini-codex/src/core"
 	"mini-codex/src/protocol"
+	"mini-codex/src/util"
 	"os"
 	"path/filepath"
 	"time"
@@ -19,7 +18,7 @@ type JsonLThreadStore struct {
 func (s *JsonLThreadStore) CreateThread() <-chan core.Result[core.Thread] {
 	now := time.Now().UnixMilli()
 	thread := core.Thread{
-		ID:        mustNewThreadID(),
+		ID:        util.MustNewID(),
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -64,15 +63,6 @@ func (s *JsonLThreadStore) AppendMessage(threadID string, msg protocol.Message) 
 		ch <- fmt.Errorf("unknown role: %s", msg.Role)
 		return ch
 	}
-}
-
-func mustNewThreadID() string {
-	b := make([]byte, 16)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(fmt.Sprintf("failed to generate threadID: %s", err))
-	}
-	return base64.StdEncoding.EncodeToString(b)
 }
 
 func writeThreadFile(fileName string, thread core.Thread) error {

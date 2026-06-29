@@ -1,22 +1,30 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"mini-codex/src/model"
 	"mini-codex/src/protocol"
-	"mini-codex/src/storage"
 )
 
 func main() {
 	fmt.Println("mini-codex")
-	store := storage.JsonLThreadStore{Root: "state"}
 
-	result := <-store.CreateThread()
-	if result.Err != nil {
-		panic(result.Err)
+	ctx := context.Background()
+	provider := model.DummyProvider{}
+
+	fmt.Println("user message:")
+	req := model.ModelRequest{Messages: []protocol.Message{{Content: "Hello!"}}}
+	response := provider.Stream(ctx, req)
+	for event := range response {
+		fmt.Printf("%s", event.TextDelta)
 	}
 
-	err := <-store.AppendMessage(result.Val.ID, protocol.Message{Role: protocol.RoleUser, Content: "Hello World!"})
-	if err != nil {
-		panic(err)
+	fmt.Println()
+	fmt.Println("tool call:")
+	req = model.ModelRequest{Messages: []protocol.Message{{Content: "read go.mod"}}}
+	response = provider.Stream(ctx, req)
+	for event := range response {
+		fmt.Printf("%v", event.ToolCall)
 	}
 }
