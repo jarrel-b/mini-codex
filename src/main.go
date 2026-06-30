@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"mini-codex/src/core"
 	"mini-codex/src/events"
 	"mini-codex/src/model"
 	"mini-codex/src/protocol"
@@ -14,15 +15,14 @@ func main() {
 	ctx := context.Background()
 
 	tools := session.SessionTools{
-		Tools: map[string]protocol.ToolSpec{
-			"read_file": protocol.ToolSpec{Name: "read_file"},
-		},
+		Tools: map[string]protocol.ToolSpec{"read_file": {Name: "read_file"}},
 	}
 
 	s := session.Session{
-		Model: &model.DummyProvider{},
-		Sink:  &events.StdoutSink{},
-		Tools: tools,
+		Model:          &model.DummyProvider{},
+		Sink:           &events.StdoutSink{},
+		Tools:          tools,
+		ContextBuilder: &core.SimpleContextBuilder{Model: "dummy_provider"},
 	}
 
 	err := <-s.RunUserTurn(ctx, "Hello World!")

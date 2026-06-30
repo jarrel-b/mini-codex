@@ -1,5 +1,7 @@
 package protocol
 
+import "context"
+
 type Role string
 
 const (
@@ -155,4 +157,29 @@ func NewErrorEvent(err error) Event {
 		return Event{Type: EventError}
 	}
 	return Event{Type: EventError, Error: err.Error()}
+}
+
+type ModelRequest struct {
+	Model    string
+	Messages []Message
+	Tools    []ToolSpec
+}
+
+type ModelEvent struct {
+	ID        string
+	Type      ModelEventType
+	TextDelta string
+	ToolCall  ToolCall
+}
+
+type ModelEventType string
+
+const (
+	ModelEventTextDelta ModelEventType = "text_delta"
+	ModelEventToolCall  ModelEventType = "tool_call"
+	ModelEventCompleted ModelEventType = "completed"
+)
+
+type ModelProvider interface {
+	Stream(context.Context, ModelRequest) <-chan ModelEvent
 }

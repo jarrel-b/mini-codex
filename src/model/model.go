@@ -9,35 +9,10 @@ import (
 	"time"
 )
 
-type ModelRequest struct {
-	Model    string
-	Messages []protocol.Message
-	Tools    []protocol.ToolSpec
-}
-
-type ModelEvent struct {
-	ID        string
-	Type      ModelEventType
-	TextDelta string
-	ToolCall  protocol.ToolCall
-}
-
-type ModelEventType string
-
-const (
-	ModelEventTextDelta ModelEventType = "text_delta"
-	ModelEventToolCall  ModelEventType = "tool_call"
-	ModelEventCompleted ModelEventType = "completed"
-)
-
-type ModelProvider interface {
-	Stream(context.Context, ModelRequest) <-chan ModelEvent
-}
-
 type DummyProvider struct{}
 
-func (p *DummyProvider) Stream(ctx context.Context, req ModelRequest) <-chan ModelEvent {
-	ch := make(chan ModelEvent)
+func (p *DummyProvider) Stream(ctx context.Context, req protocol.ModelRequest) <-chan protocol.ModelEvent {
+	ch := make(chan protocol.ModelEvent)
 
 	var lastMsg protocol.Message
 
@@ -45,7 +20,7 @@ func (p *DummyProvider) Stream(ctx context.Context, req ModelRequest) <-chan Mod
 		lastMsg = req.Messages[len(req.Messages)-1]
 	}
 
-	send := func(e ModelEvent) bool {
+	send := func(e protocol.ModelEvent) bool {
 		select {
 		case ch <- e:
 			return true
@@ -60,12 +35,12 @@ func (p *DummyProvider) Stream(ctx context.Context, req ModelRequest) <-chan Mod
 		if strings.Contains(lastMsg.Content, "read README.md") {
 			toolCall := protocol.ToolCall{ID: util.MustNewID(), Name: "read_file", Args: []string{"README.md"}}
 
-			event := ModelEvent{ID: util.MustNewID(), Type: ModelEventToolCall, ToolCall: toolCall}
+			event := protocol.ModelEvent{ID: util.MustNewID(), Type: protocol.ModelEventToolCall, ToolCall: toolCall}
 			if !send(event) {
 				return
 			}
 
-			send(ModelEvent{ID: util.MustNewID(), Type: ModelEventCompleted})
+			send(protocol.ModelEvent{ID: util.MustNewID(), Type: protocol.ModelEventCompleted})
 			return
 		}
 
@@ -81,7 +56,7 @@ func (p *DummyProvider) Stream(ctx context.Context, req ModelRequest) <-chan Mod
 		defer ticker.Stop()
 
 		for _, delta := range strings.SplitAfter(response, " ") {
-			if !send(ModelEvent{ID: util.MustNewID(), Type: ModelEventTextDelta, TextDelta: delta}) {
+			if !send(protocol.ModelEvent{ID: util.MustNewID(), Type: protocol.ModelEventTextDelta, TextDelta: delta}) {
 				return
 			}
 
@@ -92,7 +67,7 @@ func (p *DummyProvider) Stream(ctx context.Context, req ModelRequest) <-chan Mod
 			}
 		}
 
-		send(ModelEvent{ID: util.MustNewID(), Type: ModelEventCompleted})
+		send(protocol.ModelEvent{ID: util.MustNewID(), Type: protocol.ModelEventCompleted})
 	}()
 
 	return ch
