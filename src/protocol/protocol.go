@@ -1,6 +1,9 @@
 package protocol
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+)
 
 type Role string
 
@@ -29,22 +32,22 @@ const (
 )
 
 type Event struct {
-	Type            EventType `json:"type"`
-	ThreadID        string    `json:"thread_id,omitempty"`
-	TurnID          string    `json:"turn_id,omitempty"`
-	Text            string    `json:"text,omitempty"`
-	ToolID          string    `json:"tool_id,omitempty"`
-	ToolName        string    `json:"tool_name,omitempty"`
-	ToolArgs        []string  `json:"tool_args,omitempty"`
-	ToolOutput      string    `json:"tool_output,omitempty"`
-	ToolCallOK      bool      `json:"tool_call_ok"`
-	ApprovalID      string    `json:"approval_id,omitempty"`
-	ApprovalSummary string    `json:"approval_summary,omitempty"`
-	ApprovalDetails string    `json:"approval_details,omitempty"`
-	Approved        bool      `json:"approved"`
-	FileChanged     string    `json:"file_changed,omitempty"`
-	DiffUpdated     string    `json:"diff_updated,omitempty"`
-	Error           string    `json:"error,omitempty"`
+	Type            EventType       `json:"type"`
+	ThreadID        string          `json:"threadId,omitempty"`
+	TurnID          string          `json:"turnId,omitempty"`
+	Text            string          `json:"text,omitempty"`
+	ToolID          string          `json:"toolId,omitempty"`
+	ToolName        string          `json:"toolName,omitempty"`
+	ToolArgs        json.RawMessage `json:"toolArgs,omitempty"`
+	ToolOutput      string          `json:"toolOutput,omitempty"`
+	ToolCallOK      bool            `json:"toolCallOk"`
+	ApprovalID      string          `json:"approvalId,omitempty"`
+	ApprovalSummary string          `json:"approvalSummary,omitempty"`
+	ApprovalDetails string          `json:"approvalDetails,omitempty"`
+	Approved        bool            `json:"approved"`
+	FileChanged     string          `json:"fileChanged,omitempty"`
+	DiffUpdated     string          `json:"diffUpdated,omitempty"`
+	Error           string          `json:"error,omitempty"`
 }
 
 type EventType string
@@ -100,8 +103,8 @@ func NewModelTextDeltaEvent(text string) Event {
 	return Event{Type: EventModelTextDelta, Text: text}
 }
 
-func NewModelToolCallEvent(id, name string, args []string) Event {
-	return Event{Type: EventModelToolCall, ToolID: id, ToolName: name, ToolArgs: args}
+func NewModelToolCallEvent(call ToolCall) Event {
+	return Event{Type: EventModelToolCall, ToolID: call.ID, ToolName: call.Name, ToolArgs: call.Args}
 }
 
 func NewModelToolCallCompletedEvent(id string) Event {
@@ -112,8 +115,8 @@ func NewModelCompletedEvent() Event {
 	return Event{Type: EventModelCompleted}
 }
 
-func NewToolRequestedEvent(id, name string, args []string) Event {
-	return Event{Type: EventToolRequested, ToolID: id, ToolName: name, ToolArgs: args}
+func NewToolRequestedEvent(call ToolCall) Event {
+	return Event{Type: EventToolRequested, ToolID: call.ID, ToolName: call.Name, ToolArgs: call.Args}
 }
 
 func NewToolStartedEvent(id, name string) Event {
@@ -124,8 +127,8 @@ func NewToolOutputDeltaEvent(id, text string) Event {
 	return Event{Type: EventToolOutputDelta, ToolID: id, Text: text}
 }
 
-func NewToolFinishedEvent(id, name, output string, ok bool, err error) Event {
-	event := Event{Type: EventToolFinished, ToolID: id, ToolName: name, ToolOutput: output, ToolCallOK: ok}
+func NewToolFinishedEvent(call ToolCall, ok bool, output string, err error) Event {
+	event := Event{Type: EventToolFinished, ToolID: call.ID, ToolName: call.Name, ToolOutput: output, ToolCallOK: ok}
 	if err != nil {
 		event.Error = err.Error()
 	}
@@ -170,6 +173,7 @@ type ModelEvent struct {
 	Type      ModelEventType
 	TextDelta string
 	ToolCall  ToolCall
+	Error     error
 }
 
 type ModelEventType string
@@ -177,9 +181,37 @@ type ModelEventType string
 const (
 	ModelEventTextDelta ModelEventType = "text_delta"
 	ModelEventToolCall  ModelEventType = "tool_call"
+	ModelEventFailed    ModelEventType = "failed"
 	ModelEventCompleted ModelEventType = "completed"
 )
 
 type ModelProvider interface {
 	Stream(context.Context, ModelRequest) <-chan ModelEvent
+}
+
+type ToolSpec struct {
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	InputSchema InputSchema `json:"inputSchema"`
+}
+
+type InputSchema struct {
+	Type                 string                 `json:"type"`
+	Description          string                 `json:"description"`
+	Properties           map[string]InputSchema `json:"properties"`
+	Required             []string               `json:"required"`
+	AdditionalProperties bool                   `json:"additionalProperties"`
+}
+
+type ToolCall struct {
+	ID   string          `json:"id"`
+	Name string          `json:"name"`
+	Args json.RawMessage `json:"args"`
+}
+
+type ToolResult struct {
+	OK       bool           `json:"ok"`
+	Content  string         `json:"content"`
+	Metadata map[string]any `json:"metadata"`
+	Error    error          `json:"error"`
 }

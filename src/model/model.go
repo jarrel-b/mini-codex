@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"mini-codex/src/protocol"
 	"mini-codex/src/util"
@@ -33,7 +34,13 @@ func (p *DummyProvider) Stream(ctx context.Context, req protocol.ModelRequest) <
 		defer close(ch)
 
 		if strings.Contains(lastMsg.Content, "read README.md") {
-			toolCall := protocol.ToolCall{ID: util.MustNewID(), Name: "read_file", Args: []string{"README.md"}}
+			args, err := json.Marshal(map[string]string{"path": "README.md"})
+			if err != nil {
+				send(protocol.ModelEvent{ID: util.MustNewID(), Type: protocol.ModelEventFailed, Error: err})
+				return
+			}
+
+			toolCall := protocol.ToolCall{ID: util.MustNewID(), Name: "read_file", Args: args}
 
 			event := protocol.ModelEvent{ID: util.MustNewID(), Type: protocol.ModelEventToolCall, ToolCall: toolCall}
 			if !send(event) {

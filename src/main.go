@@ -8,20 +8,30 @@ import (
 	"mini-codex/src/model"
 	"mini-codex/src/protocol"
 	"mini-codex/src/session"
+	"mini-codex/src/tools"
 )
 
 func main() {
 	fmt.Println("mini-codex")
 	ctx := context.Background()
 
-	tools := session.SessionTools{
-		Tools: map[string]protocol.ToolSpec{"read_file": {Name: "read_file"}},
-	}
+	registry := tools.ToolRegistry{}
+	registry.Register(protocol.ToolSpec{
+		Name:        "read_file",
+		Description: "Read contents of a file",
+		InputSchema: protocol.InputSchema{
+			Type:                 "object",
+			Description:          "Read contents of a file",
+			Properties:           map[string]protocol.InputSchema{"path": {Type: "string", Description: "Path to file"}},
+			Required:             []string{"path"},
+			AdditionalProperties: false,
+		},
+	}, tools.ReadFileTool)
 
 	s := session.Session{
 		Model:          &model.DummyProvider{},
 		Sink:           &events.StdoutSink{},
-		Tools:          tools,
+		Tools:          registry,
 		ContextBuilder: &core.SimpleContextBuilder{Model: "dummy_provider"},
 	}
 
