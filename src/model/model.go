@@ -16,6 +16,7 @@ type ModelRequest struct {
 }
 
 type ModelEvent struct {
+	ID        string
 	Type      ModelEventType
 	TextDelta string
 	ToolCall  protocol.ToolCall
@@ -56,25 +57,31 @@ func (p *DummyProvider) Stream(ctx context.Context, req ModelRequest) <-chan Mod
 	go func() {
 		defer close(ch)
 
-		if strings.Contains(lastMsg.Content, "read go.mod") {
-			toolCall := protocol.ToolCall{ID: util.MustNewID(), Name: "read_file", Args: []string{"go.mod"}}
+		if strings.Contains(lastMsg.Content, "read README.md") {
+			toolCall := protocol.ToolCall{ID: util.MustNewID(), Name: "read_file", Args: []string{"README.md"}}
 
-			event := ModelEvent{Type: ModelEventToolCall, ToolCall: toolCall}
+			event := ModelEvent{ID: util.MustNewID(), Type: ModelEventToolCall, ToolCall: toolCall}
 			if !send(event) {
 				return
 			}
 
-			send(ModelEvent{Type: ModelEventCompleted})
+			send(ModelEvent{ID: util.MustNewID(), Type: ModelEventCompleted})
 			return
+		}
+
+		var response string
+
+		if lastMsg.ToolCallID != "" {
+			response = fmt.Sprintf("Result of tool call: %s", lastMsg.Content)
+		} else {
+			response = fmt.Sprintf("I received: %s\n\nTry asking: \"read README.md\" to trigger a tool call.", lastMsg.Content)
 		}
 
 		ticker := time.NewTicker(100 * time.Millisecond)
 		defer ticker.Stop()
 
-		response := fmt.Sprintf("I received: %s\n\nTry asking: \"read go.mod\" to trigger a tool call.", lastMsg.Content)
-
 		for _, delta := range strings.SplitAfter(response, " ") {
-			if !send(ModelEvent{Type: ModelEventTextDelta, TextDelta: delta}) {
+			if !send(ModelEvent{ID: util.MustNewID(), Type: ModelEventTextDelta, TextDelta: delta}) {
 				return
 			}
 
@@ -85,7 +92,7 @@ func (p *DummyProvider) Stream(ctx context.Context, req ModelRequest) <-chan Mod
 			}
 		}
 
-		send(ModelEvent{Type: ModelEventCompleted})
+		send(ModelEvent{ID: util.MustNewID(), Type: ModelEventCompleted})
 	}()
 
 	return ch

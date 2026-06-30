@@ -3,28 +3,35 @@ package main
 import (
 	"context"
 	"fmt"
+	"mini-codex/src/events"
 	"mini-codex/src/model"
 	"mini-codex/src/protocol"
+	"mini-codex/src/session"
 )
 
 func main() {
 	fmt.Println("mini-codex")
-
 	ctx := context.Background()
-	provider := model.DummyProvider{}
 
-	fmt.Println("user message:")
-	req := model.ModelRequest{Messages: []protocol.Message{{Content: "Hello!"}}}
-	response := provider.Stream(ctx, req)
-	for event := range response {
-		fmt.Printf("%s", event.TextDelta)
+	tools := session.SessionTools{
+		Tools: map[string]protocol.ToolSpec{
+			"read_file": protocol.ToolSpec{Name: "read_file"},
+		},
 	}
 
-	fmt.Println()
-	fmt.Println("tool call:")
-	req = model.ModelRequest{Messages: []protocol.Message{{Content: "read go.mod"}}}
-	response = provider.Stream(ctx, req)
-	for event := range response {
-		fmt.Printf("%v", event.ToolCall)
+	s := session.Session{
+		Model: &model.DummyProvider{},
+		Sink:  &events.StdoutSink{},
+		Tools: tools,
+	}
+
+	err := <-s.RunUserTurn(ctx, "Hello World!")
+	if err != nil {
+		panic(err)
+	}
+
+	err = <-s.RunUserTurn(ctx, "read README.md")
+	if err != nil {
+		panic(err)
 	}
 }

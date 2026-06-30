@@ -16,4 +16,5 @@ type ToolResult struct {
 	OK       bool
 	Content  string
 	Metadata map[string]any
+	Error    error
 }

@@ -37,7 +37,7 @@ func (s *JsonLThreadStore) CreateThread() <-chan core.Result[core.Thread] {
 		return ch
 	}
 
-	event := protocol.Event{Type: protocol.EventThreadStarted, ThreadID: thread.ID}
+	event := protocol.NewThreadStartedEvent(thread.ID)
 	err = appendEvent(eventsFileName(s.Root, thread.ID), event)
 	if err != nil {
 		ch <- core.Result[core.Thread]{Err: err}
@@ -52,11 +52,15 @@ func (s *JsonLThreadStore) AppendMessage(threadID string, msg protocol.Message) 
 	ch := make(chan error, 1)
 	switch msg.Role {
 	case protocol.RoleUser:
-		err := appendEvent(eventsFileName(s.Root, threadID), protocol.Event{Type: protocol.EventUserMessage, ThreadID: threadID, Text: msg.Content})
+		event := protocol.NewUserMessageEvent(msg.Content)
+		event.ThreadID = threadID
+		err := appendEvent(eventsFileName(s.Root, threadID), event)
 		ch <- err
 		return ch
 	case protocol.RoleAssistant:
-		err := appendEvent(eventsFileName(s.Root, threadID), protocol.Event{Type: protocol.EventAssistantMessage, ThreadID: threadID, Text: msg.Content})
+		event := protocol.NewAssistantMessageEvent(msg.Content)
+		event.ThreadID = threadID
+		err := appendEvent(eventsFileName(s.Root, threadID), event)
 		ch <- err
 		return ch
 	default:

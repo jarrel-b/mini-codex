@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"mini-codex/src/protocol"
 )
@@ -25,7 +26,7 @@ type Turn struct {
 }
 
 type EventSink interface {
-	emit(protocol.EventType) <-chan struct{}
+	Emit(context.Context, protocol.Event) <-chan struct{}
 }
 
 type Result[T any] struct {
