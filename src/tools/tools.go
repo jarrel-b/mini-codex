@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mini-codex/src/core"
 	"mini-codex/src/protocol"
+	"mini-codex/src/shell"
 	"os"
 	"path/filepath"
 )
@@ -76,6 +77,23 @@ func (r *ToolRegistry) Execute(ctx context.Context, call protocol.ToolCall, tool
 	return ch
 }
 
+var ReadFileToolSpec = protocol.ToolSpec{
+	Name:        "read_file",
+	Description: "Read contents of a file",
+	InputSchema: protocol.InputSchema{
+		Type:        "object",
+		Description: "Read contents of a file",
+		Properties: map[string]protocol.InputSchema{
+			"path": {
+				Type:        "string",
+				Description: "Path to file",
+			},
+		},
+		Required:             []string{"path"},
+		AdditionalProperties: false,
+	},
+}
+
 func ReadFileTool(ctx context.Context, call protocol.ToolCall, toolCtx ToolContext) protocol.ToolResult {
 	type inputSchema struct {
 		Path string `json:"path"`
@@ -96,4 +114,64 @@ func ReadFileTool(ctx context.Context, call protocol.ToolCall, toolCtx ToolConte
 	}
 
 	return protocol.ToolResult{OK: true, Content: string(content)}
+}
+
+var ShellToolSpec = protocol.ToolSpec{
+	Name:        "shell",
+	Description: "Execute a shell command",
+	InputSchema: protocol.InputSchema{
+		Type:        "object",
+		Description: "Execute a shell command",
+		Properties: map[string]protocol.InputSchema{
+			"command": {
+				Type:        "string",
+				Description: "Command to execute",
+			},
+			"args": {
+				Type:        "array",
+				Description: "Arguments to pass to the command",
+				Items:       &protocol.InputSchema{Type: "string"},
+			},
+			"timeoutMs": {
+				Type:        "number",
+				Description: "Optional timeout in milliseconds",
+			},
+		},
+		Required:             []string{"command"},
+		AdditionalProperties: false,
+	},
+}
+
+func ShellTool(ctx context.Context, call protocol.ToolCall, toolCtx ToolContext) protocol.ToolResult {
+	type inputSchema struct {
+		Command   string   `json:"command"`
+		Args      []string `json:"args"`
+		TimeoutMs int      `json:"timeoutMs"`
+	}
+
+	var input inputSchema
+	if err := json.Unmarshal(call.Args, &input); err != nil {
+		return protocol.ToolResult{OK: false, Error: err}
+	}
+
+	if input.Command == "" {
+		return protocol.ToolResult{OK: false, Error: fmt.Errorf("no command provided")}
+	}
+
+	resultCh := shell.RunExec(ctx, shell.ExecRequest{
+		Command:    input.Command,
+		Args:       input.Args,
+		CurrentDir: toolCtx.CurrentDir,
+		TimeoutMs:  input.TimeoutMs,
+	})
+
+	select {
+	case <-ctx.Done():
+		return protocol.ToolResult{OK: false, Error: ctx.Err()}
+	case result := <-resultCh:
+		if result.Err != nil {
+			return protocol.ToolResult{OK: false, Error: result.Err}
+		}
+		return protocol.ToolResult{OK: true, Content: result.Val.Stdout}
+	}
 }

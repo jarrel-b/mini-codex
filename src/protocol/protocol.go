@@ -199,6 +199,7 @@ type InputSchema struct {
 	Type                 string                 `json:"type"`
 	Description          string                 `json:"description"`
 	Properties           map[string]InputSchema `json:"properties"`
+	Items                *InputSchema           `json:"items,omitempty"`
 	Required             []string               `json:"required"`
 	AdditionalProperties bool                   `json:"additionalProperties"`
 }

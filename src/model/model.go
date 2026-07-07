@@ -51,6 +51,28 @@ func (p *DummyProvider) Stream(ctx context.Context, req protocol.ModelRequest) <
 			return
 		}
 
+		if strings.Contains(lastMsg.Content, "contents of this dir") {
+			args, err := json.Marshal(map[string]any{
+				"command":   "ls",
+				"args":      []string{"."},
+				"timeoutMs": 100,
+			})
+			if err != nil {
+				send(protocol.ModelEvent{ID: util.MustNewID(), Type: protocol.ModelEventFailed, Error: err})
+				return
+			}
+
+			toolCall := protocol.ToolCall{ID: util.MustNewID(), Name: "shell", Args: args}
+
+			event := protocol.ModelEvent{ID: util.MustNewID(), Type: protocol.ModelEventToolCall, ToolCall: toolCall}
+			if !send(event) {
+				return
+			}
+
+			send(protocol.ModelEvent{ID: util.MustNewID(), Type: protocol.ModelEventCompleted})
+			return
+		}
+
 		var response string
 
 		if lastMsg.ToolCallID != "" {
